@@ -29,20 +29,20 @@ A Helm chart for deploying Alfresco Search
 | ingress.path | string | `"/solr"` |  |
 | ingress.tls | list | `[]` |  |
 | ingress.whitelist_ips | string | `"0.0.0.0/0"` | Comma separated list of IP CIDR to limit search endpoint over the internet |
-| initContainer.image.pullPolicy | string | `"Always"` |  |
+| initContainer.image.pullPolicy | string | `"IfNotPresent"` |  |
 | initContainer.image.repository | string | `"busybox"` |  |
-| initContainer.image.tag | int | `1` |  |
+| initContainer.image.tag | string | `"1.33.1"` |  |
 | initContainer.resources.limits.memory | string | `"10Mi"` |  |
 | initContainer.resources.requests.memory | string | `"5Mi"` |  |
 | insightEngineImage.internalPort | int | `8983` |  |
-| insightEngineImage.pullPolicy | string | `"Always"` |  |
+| insightEngineImage.pullPolicy | string | `"IfNotPresent"` |  |
 | insightEngineImage.repository | string | `"quay.io/alfresco/insight-engine"` |  |
 | insightEngineImage.tag | string | `"2.0.0"` |  |
 | livenessProbe.initialDelaySeconds | int | `130` |  |
 | livenessProbe.periodSeconds | int | `20` |  |
 | livenessProbe.timeoutSeconds | int | `10` |  |
-| persistence | object | `{"EbsPvConfiguration":{"fsType":"ext4"},"VolumeSizeRequest":"10Gi","enabled":true,"search":{"data":{"mountPath":"/opt/alfresco-search-services/data","subPath":"alfresco-content-services/solr-data"}}}` | Defines the mounting points for the persistence required by the apps in the cluster the solr data folder containing the indexes for the alfresco-search-services is mapped to alfresco-content-services/solr-data |
-| persistence.VolumeSizeRequest | string | `"10Gi"` | Only define if you have a specific claim already created existingClaim: "search-master-claim"  |
+| persistence | object | `{"EbsPvConfiguration":{"fsType":"ext4"},"VolumeSizeRequest":"10Gi","chownWithDynamicProvisioning":false,"enabled":true,"search":{"data":{"mountPath":"/opt/alfresco-search-services/data","subPath":"alfresco-content-services/solr-data"}}}` | Defines the mounting points for the persistence required by the apps in the cluster the solr data folder containing the indexes for the alfresco-search-services is mapped to alfresco-content-services/solr-data |
+| persistence.VolumeSizeRequest | string | `"10Gi"` | Only define if you have a specific claim already created existingClaim: "search-master-claim" |
 | readinessProbe.initialDelaySeconds | int | `60` |  |
 | readinessProbe.periodSeconds | int | `20` |  |
 | readinessProbe.timeoutSeconds | int | `10` |  |
@@ -51,7 +51,7 @@ A Helm chart for deploying Alfresco Search
 | resources.limits.memory | string | `"2000Mi"` |  |
 | resources.requests.memory | string | `"2000Mi"` | Alfresco Search Services requests memory |
 | searchServicesImage.internalPort | int | `8983` |  |
-| searchServicesImage.pullPolicy | string | `"Always"` |  |
+| searchServicesImage.pullPolicy | string | `"IfNotPresent"` |  |
 | searchServicesImage.repository | string | `"alfresco/alfresco-search-services"` |  |
 | searchServicesImage.tag | string | `"2.0.0"` |  |
 | service.externalPort | int | `80` |  |

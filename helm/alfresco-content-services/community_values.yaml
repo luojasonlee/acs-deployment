@@ -16,16 +16,16 @@ repository:
     type: Recreate
   image:
     repository: alfresco/alfresco-content-repository-community
-    tag: "7.0.0"
-    pullPolicy: Always
+    tag: "7.1.0-A9"
+    pullPolicy: IfNotPresent
     internalPort: 8080
     hazelcastPort: 5701
   initContainers:
     db:
       image:
         repository: busybox
-        tag: 1
-        pullPolicy: Always
+        tag: 1.33.1
+        pullPolicy: IfNotPresent
       resources:
         requests:
           memory: "5Mi"
@@ -34,8 +34,8 @@ repository:
     fs:
       image:
         repository: busybox
-        tag: 1
-        pullPolicy: Always
+        tag: 1.33.1
+        pullPolicy: IfNotPresent
       resources:
         requests:
           memory: "5Mi"
@@ -98,8 +98,8 @@ pdfrenderer:
   replicaCount: 1
   image:
     repository: alfresco/alfresco-pdf-renderer
-    tag: "2.4.0"
-    pullPolicy: Always
+    tag: "2.5.3"
+    pullPolicy: IfNotPresent
     internalPort: 8090
   service:
     name: pdfrenderer
@@ -131,8 +131,8 @@ imagemagick:
   replicaCount: 1
   image:
     repository: alfresco/alfresco-imagemagick
-    tag: "2.4.0"
-    pullPolicy: Always
+    tag: "2.5.3"
+    pullPolicy: IfNotPresent
     internalPort: 8090
   service:
     name: imagemagick
@@ -164,8 +164,8 @@ libreoffice:
   replicaCount: 1
   image:
     repository: alfresco/alfresco-libreoffice
-    tag: "2.4.0"
-    pullPolicy: Always
+    tag: "2.5.3"
+    pullPolicy: IfNotPresent
     internalPort: 8090
   service:
     name: libreoffice
@@ -197,8 +197,8 @@ tika:
   replicaCount: 1
   image:
     repository: alfresco/alfresco-tika
-    tag: "2.4.0"
-    pullPolicy: Always
+    tag: "2.5.3"
+    pullPolicy: IfNotPresent
     internalPort: 8090
   service:
     name: tika
@@ -231,8 +231,8 @@ transformmisc:
   replicaCount: 1
   image:
     repository: alfresco/alfresco-transform-misc
-    tag: "2.4.0"
-    pullPolicy: Always
+    tag: "2.5.3"
+    pullPolicy: IfNotPresent
     internalPort: 8090
   service:
     name: transformmisc
@@ -264,8 +264,8 @@ share:
   replicaCount: 1
   image:
     repository: alfresco/alfresco-share
-    tag: "7.0.0"
-    pullPolicy: Always
+    tag: "7.1.0-M2"
+    pullPolicy: IfNotPresent
     internalPort: 8080
   service:
     name: share
@@ -339,7 +339,7 @@ alfresco-search:
     # Port of the external solr6 instance.
 #    port: "8983"
   searchServicesImage:
-    tag: "2.0.1"
+    tag: "2.0.2"
   repository: &repositoryHostPort
     # The value for "host" is the name of this chart
     host: alfresco-cs
@@ -382,7 +382,7 @@ postgresql:
   nameOverride: postgresql-acs
   image:
     tag: "13.1.0"
-    pullPolicy: Always
+    pullPolicy: IfNotPresent
   postgresqlUsername: alfresco
   postgresqlPassword: alfresco
   postgresqlDatabase: alfresco

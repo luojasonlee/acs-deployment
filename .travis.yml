@@ -15,31 +15,31 @@ stages:
   - name: lint
   - name: test
   - name: community
+  - name: 7.0.N
   - name: 6.2.N
   - name: 6.1.N
   - name: publish
     if: branch = master OR commit_message = "[publish]"
 
 import:
-  - source: Alfresco/alfresco-build-tools:.travis.kubernetes_install.yml@v1.1.0
-  - source: Alfresco/alfresco-build-tools:.travis.helm_install.yml@v1.1.0
-  - source: Alfresco/alfresco-build-tools:.travis.kubepug_install.yml@v1.1.0
-  - source: Alfresco/alfresco-build-tools:.travis.checkov_install.yml@v1.1.0
-  - source: Alfresco/alfresco-build-tools:.travis.docker_login.yml@v1.1.0
-  - source: Alfresco/alfresco-build-tools:.travis.helm-docs_install.yml@v1.1.0
-  - source: Alfresco/alfresco-build-tools:.travis.pre-commit.yml@v1.1.0
+  - source: Alfresco/alfresco-build-tools:.travis.awscli_install.yml@v1.1.3
+  - source: Alfresco/alfresco-build-tools:.travis.aws-iam-authenticator_install.yml@v1.1.3
+  - source: Alfresco/alfresco-build-tools:.travis.kubernetes_install.yml@v1.1.3
+  - source: Alfresco/alfresco-build-tools:.travis.helm_install.yml@v1.1.3
+  - source: Alfresco/alfresco-build-tools:.travis.kubepug_install.yml@v1.1.3
+  - source: Alfresco/alfresco-build-tools:.travis.checkov_install.yml@v1.1.3
+  - source: Alfresco/alfresco-build-tools:.travis.docker_login.yml@v1.1.3
+  - source: Alfresco/alfresco-build-tools:.travis.helm-docs_install.yml@v1.1.3
+  - source: Alfresco/alfresco-build-tools:.travis.pre-commit.yml@v1.1.3
 
 env:
   global:
+    - HOSTED_ZONE=dev.envalfresco.com
     - TRAVIS_WAIT_TIMEOUT=${TRAVIS_WAIT_TIMEOUT:-30}
     - BRANCH=${TRAVIS_PULL_REQUEST_BRANCH:-${TRAVIS_BRANCH}}
     - HELM_REPO_BASE_URL=https://kubernetes-charts.alfresco.com
     - HELM_REPO=incubator
-    - KUBERNETES_VERSION=1.18.4
     - GIT_DIFF=$(git diff origin/master --name-only .)
-    - AWS_IAM_AUTHENTICATOR_VERSION=${AWS_IAM_AUTHENTICATOR_VERSION:-1.18.8/2020-09-18}
-    - CHECKOV_VERSION=1.0.865
-    - HELM_DOCS_VERSION=1.5.0
 
 branches:
   only:
@@ -49,10 +49,6 @@ branches:
 
 before_install:
   - |
-    pip install --upgrade awscli
-    mkdir -p $HOME/bin && export PATH=$PATH:$HOME/bin
-    curl -sSLO https://amazon-eks.s3.us-west-2.amazonaws.com/$AWS_IAM_AUTHENTICATOR_VERSION/bin/$(uname | tr '[:upper:]' '[:lower:]')/amd64/aws-iam-authenticator{,.sha256} && openssl sha1 -sha256 aws-iam-authenticator &&
-    chmod +x ./aws-iam-authenticator && mv ./aws-iam-authenticator $HOME/bin/aws-iam-authenticator
     aws eks update-kubeconfig --name acs-cluster --region=eu-west-1
     rm -rf /home/travis/.cache/pre-commit
 
@@ -203,7 +199,7 @@ _helm_deploy: &helm_deploy
     --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-backend-protocol"="http" \
     --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-ssl-ports"="https" \
     --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-ssl-cert"="${ACM_CERTIFICATE}" \
-    --set controller.service.annotations."external-dns\.alpha\.kubernetes\.io/hostname"="$namespace.dev.alfresco.me" \
+    --set controller.service.annotations."external-dns\.alpha\.kubernetes\.io/hostname"="$namespace.${HOSTED_ZONE}" \
     --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-ssl-negotiation-policy"="ELBSecurityPolicy-TLS-1-2-2017-01" \
     --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-security-groups"="${AWS_SG}" \
     --set controller.publishService.enabled=true \
@@ -217,7 +213,7 @@ _helm_deploy: &helm_deploy
     --values=$values_file \
     --set externalPort="443" \
     --set externalProtocol="https" \
-    --set externalHost="$namespace.dev.alfresco.me" \
+    --set externalHost="$namespace.${HOSTED_ZONE}" \
     --set persistence.enabled=true \
     --set persistence.storageClass.enabled=true \
     --set persistence.storageClass.name="nfs-client" \
@@ -233,9 +229,9 @@ _helm_deploy: &helm_deploy
     DNS_SLEEP_SECONDS=10
 
     echo "Trying to perform a trace DNS query to prevent caching"
-    dig +trace $namespace.dev.alfresco.me @8.8.8.8
+    dig +trace $namespace.${HOSTED_ZONE} @8.8.8.8
     while [ "$DNS_PROPAGATED" -eq 0 ] && [ "$DNS_COUNTER" -le "$DNS_COUNTER_MAX" ]; do
-      host $namespace.dev.alfresco.me 8.8.8.8
+      host $namespace.${HOSTED_ZONE} 8.8.8.8
       if [ "$?" -eq 1 ]; then
         DNS_COUNTER=$((DNS_COUNTER + 1))
         echo "DNS Not Propagated - Sleeping $DNS_SLEEP_SECONDS seconds"
@@ -246,7 +242,7 @@ _helm_deploy: &helm_deploy
       fi
     done
 
-    [ $DNS_PROPAGATED -ne 1 ] && echo "DNS entry for $namespace.dev.alfresco.me did not propagate within expected time" && exit 1
+    [ $DNS_PROPAGATED -ne 1 ] && echo "DNS entry for $namespace.${HOSTED_ZONE} did not propagate within expected time" && exit 1
 
     pods_ready
 
@@ -255,14 +251,14 @@ _helm_deploy: &helm_deploy
     sleep 180
 
     # run acs checks
-    docker run -a STDOUT --volume $PWD/test/postman/helm:/etc/newman --network host postman/newman_alpine33:3.9.2 run "acs-test-helm-collection.json" --global-var "protocol=https" --global-var "url=$namespace.dev.alfresco.me"
+    docker run -a STDOUT --volume $PWD/test/postman/helm:/etc/newman --network host postman/newman_alpine33:3.9.2 run "acs-test-helm-collection.json" --global-var "protocol=https" --global-var "url=$namespace.${HOSTED_ZONE}"
     TEST_RESULT=$?
     echo "TEST_RESULT=${TEST_RESULT}"
     if [[ "${TEST_RESULT}" == "0" ]]; then
       TEST_RESULT=0
       # run sync service checks
       if [[ "$values_file" != "helm/alfresco-content-services/community_values.yaml" ]]; then
-        docker run -a STDOUT --volume $PWD/test/postman/helm:/etc/newman --network host postman/newman_alpine33:3.9.2 run "sync-service-test-helm-collection.json" --global-var "protocol=https" --global-var "url=$namespace.dev.alfresco.me"
+        docker run -a STDOUT --volume $PWD/test/postman/helm:/etc/newman --network host postman/newman_alpine33:3.9.2 run "sync-service-test-helm-collection.json" --global-var "protocol=https" --global-var "url=$namespace.${HOSTED_ZONE}"
         TEST_RESULT=$?
         echo "TEST_RESULT=${TEST_RESULT}"
       fi
@@ -283,7 +279,7 @@ _helm_deploy: &helm_deploy
         pods_ready
 
         # run checks after pod deletion
-        docker run -a STDOUT --volume $PWD/test/postman/helm:/etc/newman --network host postman/newman_alpine33:3.9.2 run "acs-validate-volume-collection.json" --global-var "protocol=https" --global-var "url=$namespace.dev.alfresco.me"
+        docker run -a STDOUT --volume $PWD/test/postman/helm:/etc/newman --network host postman/newman_alpine33:3.9.2 run "acs-validate-volume-collection.json" --global-var "protocol=https" --global-var "url=$namespace.${HOSTED_ZONE}"
         TEST_RESULT=$?
         echo "TEST_RESULT=${TEST_RESULT}"
       fi
@@ -406,22 +402,32 @@ jobs:
       stage: test
       <<: *helm_deploy
 
-    - stage: community
-      name: community-helm
+    - name: community-helm
+      stage: community
       <<: *helm_deploy
     - name: community-compose
+      stage: community
       <<: *docker_deploy
 
-    - stage: 6.2.N
-      name: 6.2.N-helm
+    - name: 7.0.N-helm
+      stage: 7.0.N
+      <<: *helm_deploy
+    - name: 7.0.N-compose
+      stage: 7.0.N
+      <<: *docker_deploy
+
+    - name: 6.2.N-helm
+      stage: 6.2.N
       <<: *helm_deploy
     - name: 6.2.N-compose
+      stage: 6.2.N
       <<: *docker_deploy
 
-    - stage: 6.1.N
-      name: 6.1.N-helm
+    - name: 6.1.N-helm
+      stage: 6.1.N
       <<: *helm_deploy
     - name: 6.1.N-compose
+      stage: 6.1.N
       <<: *docker_deploy
 
     - name: package and publish chart
@@ -444,6 +450,11 @@ jobs:
           export GIT_TAG="v$VERSION"
           git tag $GIT_TAG -a -m "Generated tag from TravisCI for build $TRAVIS_BUILD_NUMBER"
           git push https://$GITHUB_TOKEN@github.com/Alfresco/acs-deployment $GIT_TAG
+          git tag -d latest
+          git tag -a -m "current latest -> $GIT_TAG" -f latest ${GIT_TAG}^{}
+          for ref in ':refs/tags/latest' 'latest'
+            do git push https://$GITHUB_TOKEN@github.com/Alfresco/acs-deployment $ref
+          done
         fi
 
         COMMIT_MESSAGE_FIRST_LINE=$(git log --pretty=format:%s --max-count=1)
